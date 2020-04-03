@@ -1,0 +1,31 @@
+Value of pixel 0: 0.63831830024719238281250000000000000000000000000000, 0.63831830024719238281250000000000000000000000000000, 0.00000000000000000000000000000000000000000000000000.
+ Size: 1048576.
+Value of pixel 1 : 0.638280,0.638280.
+ Size: 1048576.
+Value of pixel 2  : 0.638242, 0.638242.
+ Size: 1048576.
+Value of pixel Size : 0.757663,0.757663.
+ Size: 1048576.
+Value of pixel green 0: 0.219524, 0.219524.
+ Size: 1048576.
+Value of pixel green 1 : 0.219398,0.219398.
+ Size: 1048576.
+Value of pixel 2 green  : 0.219272, 0.219272.
+ Size: 1048576.
+Value of pixel Size green : 0.248551,0.248551.
+ Size: 1048576.
+Value of pixel 0 blue: 0.329303, 0.329303.
+ Size: 1048576.
+Value of pixel 1blue : 0.329312,0.329312.
+ Size: 1048576.
+Value of pixel 2 blue : 0.329320, 0.329320.
+ Size: 1048576.
+Value of pixel Size blue: 0.270685,0.270685.
+ Size: 1048576.
+Value of pixel 0: 0.638280, 0.638280.
+ Size: 1048576.
+Value of pixel 0: 0.329312, 0.329312.
+ Size: 1048576.
+Value of pixel 0: 0.219398, 0.219398.
+ Size: 1048576.
+Buggy pixel at (x=1, y=0, index = 1). Press enter to continue.

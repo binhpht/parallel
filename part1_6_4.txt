@@ -1,0 +1,9 @@
+1. The proximal average total frametime (milliseconds) after the first frames in your OpenMP-multithreaded version of the code:
+    When OpenMP  is implemented in physics satelite loop and  physics iteration loop with the flag "#pragma omp parallel for", the compiler reports one more basic block vectorized unit for the loop in line 188 (parallel_6_4.c). The running time for satelite moving is considerably reduced from 166ms to 33ms and total frametime is 560 ms
+    Total frametime is reduce to 161 ms when OpenMP is implement in Graphics pixel loop with the loop line 203.
+2. We reused the code that performed some extra code transformation of optimization in the task parallel_6_3_6.c
+3.  Loops you parallelize: In parallelPhysicsEngine(), we parallel the loop line 144 (physics satelite loop) and 148 (physics interation loop). In parallelGraphicsEngine(), line 203 (Graphics pixel loop) is parallized .
+4. When OpenMP Parallelization is implemented for the loop to find the closest satellite in parallelGraphicsEngine(), it breaks the application because some parallel tasks break from  the loop when distance between satelites < SATELITE_RADIUS.
+5. OpenMP performs in native CPU threads
+6. The experiments for this task 6.4 is performed on MacBook mid 2015 A1398 (15 inch): Intel core i7-4870HQ CPU @ 2.50 Ghz x 8 (Ubuntu 18.04), GPU  GeforeGT 750M
+

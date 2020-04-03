@@ -1,0 +1,127 @@
+Hello Heikki,
+
+Here is the report of the first part of the assignment. Attached you can find all the relevant code and Makefile. As requested, the answers are in the email body and we numbered them according to the order of the respective question mark in the assignment text.
+
+Our group is made of two people:
+
+Pham Huu Thanh Binh
+267916
+thanh-binh.pham@tuni.fi
+
+Cristóvão Cruz
+259340
+cristovao.antunescruz@tuni.fi
+
+And now the answers.
+
+6.1 Benchmarking the original Code.
+All times are: total frametime, satellite moving, graphics routine.
+
+1.
+make parallel_1 && ./parallel_1
+1722,  152, 1560.
+
+2.
+make parallel_2 && ./parallel_2
+ 656,   81,  565.
+
+3.1
+make parallel_3_1 && ./parallel_3_1
+ 656,   81,  564.
+
+3.2
+Yes, the compiler managed to vectorize the loops in lines 135 and 345.
+
+4.1
+-Ofast -ftree-vectorize -mavx2 -mfma
+
+4.2
+-Ofast enables the option -ffast-math, which allows the compiler to assume, among other things, that all floating point operations are valid (no nan or inf), the use of less precision and the reordering of operations ignoring the associative rules of the language. These might result in incorrect results in numerically unstable programs, such as this one.
+
+-maxv2 and -mfma allow the use of the avx2 and fma instructions present on the CPU.
+
+In the end, we could have achieved similar results just using -march=broadwell instead of the -m options. This would enable all the optimizations that this specific processor is capable of. From our experiments, enabling these two options gives roughly the same performance, so we conclude that these were the most significant ones.
+
+4.3
+make parallel_4_3 && ./parallel_4_3
+ 401,   39,  352
+
+4.4
+Not in these experiments, but we observed this behavior during the generic algorithm optimization phase. See there for more details.
+
+6.2 Generic algorithm optimization
+Yes.
+
+We started with the runtimes mentioned in 4.3.
+
+In the Physics satellite loop, the position is being converted from global to "black hole" coordinates in every loop. However, all the computations are done in "black hole" relative coordinates. Instead of converting back and forth all the time, we can convert directly when creating the tmpPosition and then back when saving. This saves 4 add per inner loop. However, applying the difference directly on the tmpPosition generated wrong results  when compiling with -ffast-math. In order for the code to work with optimizations enabled, we had to create another position buffer. In the end this change did not affect the runtimes, but we think it will help during parallelization (and later verified that it indeed does). The code that works is parallel_6_2_1.c, and the code that should work but doesn't when the fast flags are use is parallel_6_2_1_bad.c
+See the targets parallel_6_2_1{,_bad,_bad_good} in the Makefile.
+
+In the parallelGraphicsEngine, the distance and weights are being calculated twice for each satellite. This is unnecessary and both values can be precomputed and then used in both parts of the Graphics satellite loop. This part of the code is numerically very unstable though, due to the way that the weights are computes (power -4 of the differences). These changes lead to code that is correct only when specific compiler optimizations are on. This is due to the fact that the results are checked by float equality, which will not be correct even in the case of minute differences, that can in this case arise form reordering of the operations by the compiler. More specifically, we found that when compiling the code with -ffast-math, the results were correct, but without this flag the results were not correct. This is the opposite situation as in the first part of this answer. It shows that this code is very sensitive to the overall order of the operations and it's not just a matter of disabling optimizations. This change reduced the runtime of the parallelGraphicsEngine to 325ms. The code is parallel_6_2_2.c. See the targets parallel_6_2_2{,_bad} in the Makefile.
+
+Still on the distance computation of the parallelGraphicsEngine, the square root of the distance is taken only to then raise the value to the power 4. This is unnecessary and we can work directly with the distance squared. Removing the square root saves quite a few multiplications and square root operations. This change reduce the runtime of the parallelGraphicsEngine to 280ms. The code is parallel_6_2_3.c. See the target parallel_6_2_3 in the Makefile.
+
+We also separated the second graphics loop in 3, one for each color, which allows the compiler to better vectorize the code. Once again, due to the numerical instability of this code, this lead to the error check methods to flag the results as incorrect. They are however very close, and it could be arguable the they are correct. This change further reduced the runtime of the parallelGraphicsEngine to 238ms. The code is parallel_6_2_4.c.  See the target parallel_6_2_4 in the Makefile.
+
+6.3 Code analysis for multi-thread parallelization
+1.
+The following loops can be parallelized to multiple threads: Physics satellite, Graphics pixel, Second Graphics satellite (with reduction)
+
+2.
+Yes there are.
+
+3.
+The Physics satellite loop does not benefit from parallelization because it is inside the physics iteration loop. There is not enough work on each iteration of the Physics satellite loop to compensate for the thread launching overhead.
+
+There should also be no gain from parallelizing the Second graphics loop, as it sits inside the much longer Graphics pixel loop which make more sense to parallelize.
+
+4.
+Yes, it is possible to transform the code to allow for parallelization.
+
+5.
+If we swap the Physics satellite and the physics iteration loops, we get the same results and we allow each thread of the Physics satellite loop to run for PHYSICSUPDATESPERFRAME iterations, which should now compensate for the overhead of the thread launch. The modified code is in parallel_6_3_6.c.
+
+6.
+make parallel_6_3_6 && ./parallel_6_3_6
+Yes. On the original code, the compiler reported for loop Physics satellite: "loop vectorized". Now, after changing the order of the loops, it reports: "basic block vectorized".
+
+OpenMP Parallelization
+
+For this part of the work, we started with the fastest "correct" code we achieved in the generic algorithm optimization, that is, code parallel_6_2_3. We then added the changes proposed for more efficient parallelization of the physics method.
+
+1.
+make parallel_6_4 && ./parallel_6_4
+160,   25,  125
+
+2.
+Yes, we made other code transformations. We noticed that after adding the pragma to the Physics satellite loop, the compiler no longer vectorized it with SIMD instructions, which resulted in only marginal runtime reduction for this loop. In order to circumvent this, we moved the Physics iteration loop to a separate method and split the Physics satellite loop into two loops: the "outer" and the "inner". The "outer" Physics satellite loop remained outside the Physics iteration loop to allow for multi threading and had step 16. The "inner" Physics satellite loop was placed inside the Physics iteration loop to allow for SIMD optimziations, with step 1, but 16 iterations. This way we allowed both for thread level parallelism and data level parallelism, at a cost of hardcoding the number of satellites to a multiple of 16.
+
+The resulting code is parallel_6_4.c
+
+3.
+We parallelized the "outer" Physics satellite loop and the Graphics pixel loop.
+
+4.
+There was no slowdown, so nothing to explain.
+
+5.
+We started with the following runtimes for the satellite moving and space coloring parts, respectively: 39, 280.
+
+The Physics satellite loop saw a performance increase of 1.5 times, while the Graphics pixel loop saw an increase of 2.24 times. The computer were this experiment was run has 2 native cores, 4 CPU threads. We would have expected both parts to be accelerated by a factor of 2, the native core count. However the physics satellite loop saw an increase of only 1.5 times, which could be due to different compiler optimizations being applied once the OpenMP is used. The Graphics pixel loop however saw a performance increase of 2.24 times, which leads us to believe that the code is I/O bound and the extra threads, even though not "real" make a difference by allowing the CPU to keep working even when some threads stall.
+
+6.
+Nothing was broken.
+
+7.
+No, we used our own computer.
+
+8.
+Intel(R) Core(TM) i7-5600U CPU @ 2.60GHz
+gcc (Ubuntu 7.4.0-1ubuntu1~18.04.1) 7.4.0
+
+Extra comments
+
+Out of curiosity, we experimented also with:
+clang version 8.0.0-3~ubuntu18.04.1 (tags/RELEASE_800/final)
+
+We noticed that the final code was much faster: 17ms for the satellite moving and 87ms for the space coloring. It did not however pass the error check methods. Once again, we see how fragile this code is with this kind of optimizations. The same code with different compilers produces difference results.
